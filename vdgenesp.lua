@@ -1,33 +1,27 @@
+local TARGET_FPS = 60
 local DrawingTable = {}
 local Map = workspace.Map
 local function GetRepairProgress(generator)
     if not generator then return 0 end
     local progress = generator:GetAttribute("RepairProgress")
-    if progress == nil then return 0 end
-    if type(progress) == "number" then
-        if progress > 1 then
-            return progress / 100
-        end
-        return progress
-    elseif type(progress) == "boolean" then
-        return progress and 1 or 0
-    end
-    return 0
+    if type(progress) ~= "number" then return 0 end
+    return progress
 end
 local function GetProgressColor(progress)
-    progress = math.clamp(progress, 0, 1)
+    progress = math.clamp(progress, 0, 100)
     local r, g, b = 255, 0, 0
-    if progress <= 0.5 then
-        local factor = progress / 0.5
+    if progress <= 50 then
+        local factor = progress / 50
         r = 255
         g = math.floor(255 * factor)
         b = 0
     else
-        local factor = (progress - 0.5) / 0.5
+        local factor = (progress - 50) / 50
         r = math.floor(255 * (1 - factor))
         g = 255
         b = 0
     end
+    
     return Color3.fromRGB(r, g, b)
 end
 local function scanGenerators()
@@ -45,17 +39,12 @@ local function scanGenerators()
                     break
                 end
             end
-            
             if not hasRepairProgress then continue end
             if DrawingTable[v.Address] then 
                 skippedCount = skippedCount + 1
                 continue 
             end
-            local Hb = v:FindFirstChild("HitBox") or 
-                      v:FindFirstChild("HB") or
-                      v:FindFirstChild("HumanoidRootPart") or 
-                      v:FindFirstChild("Torso") or
-                      v:FindFirstChildOfClass("BasePart")
+            local Hb = v:FindFirstChild("HitBox")
             if not Hb then continue end
             if not Hb.Position then continue end
             local GeneratorDrawing = Drawing.new("Text")
@@ -106,36 +95,45 @@ spawn(function()
         wait(5)
     end
 end)
+local FRAME_TIME = 1 / TARGET_FPS
+local lastTick = os.clock()
 spawn(function()
     while true do
+        local now = os.clock()
+        local delta = now - lastTick
+        if delta < FRAME_TIME then
+            task.wait(FRAME_TIME - delta)
+        else
+            task.wait()
+        end
+        lastTick = os.clock()
         for address, data in pairs(DrawingTable) do
             local Drawing = data[1]
             local HitBox = data[3]
             local Generator = data[4]
+
             if not HitBox or not HitBox.Parent then
-                if Drawing then
-                    Drawing:Remove()
-                end
+                if Drawing then Drawing:Remove() end
                 DrawingTable[address] = nil
                 continue
             end
-            data[2] = HitBox.Position
-            local Position = data[2]
-            local screenPos = WorldToScreen(Position)
-            if screenPos and Drawing then
-                Drawing.Position = screenPos
-                Drawing.Visible = true
+            
+            local Position = HitBox.Position
+            data[2] = Position
+            local screenPos, onScreen = WorldToScreen(Position)
+            
+            if onScreen and Drawing then
                 local progress = GetRepairProgress(Generator)
-                local percentage = math.clamp(math.floor(progress * 100), 0, 100)
+                local percentage = math.clamp(math.floor(progress), 0, 100)
                 Drawing.Text = string.format("Generator: %d%%", percentage)
                 Drawing.Color = GetProgressColor(progress)
+                Drawing.Position = screenPos
+                Drawing.Visible = true
             else
-                if Drawing then
-                    Drawing.Visible = false
-                end
+                Drawing.Visible = false
             end
         end
-        wait()
     end
 end)
+
 print("Generator ESP loaded!")
