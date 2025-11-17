@@ -1,3 +1,4 @@
+local TARGET_FPS = 120
 local DrawingTable = {}
 local Map = workspace.Map
 local function GetRepairProgress(generator)
