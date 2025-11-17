@@ -21,7 +21,6 @@ local function GetProgressColor(progress)
         g = 255
         b = 0
     end
-    
     return Color3.fromRGB(r, g, b)
 end
 local function scanGenerators()
@@ -111,17 +110,14 @@ spawn(function()
             local Drawing = data[1]
             local HitBox = data[3]
             local Generator = data[4]
-
             if not HitBox or not HitBox.Parent then
                 if Drawing then Drawing:Remove() end
                 DrawingTable[address] = nil
                 continue
             end
-            
             local Position = HitBox.Position
             data[2] = Position
             local screenPos, onScreen = WorldToScreen(Position)
-            
             if onScreen and Drawing then
                 local progress = GetRepairProgress(Generator)
                 local percentage = math.clamp(math.floor(progress), 0, 100)
@@ -135,5 +131,4 @@ spawn(function()
         end
     end
 end)
-
 print("Generator ESP loaded!")
